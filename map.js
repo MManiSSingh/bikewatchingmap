@@ -38,7 +38,7 @@ map.on('load', () => {
       type: 'line',
       source: 'cambridge_bike_lanes',
       paint: {
-        'line-color': '#1E90FF',  
+        'line-color': 'green',  
         'line-width': 3,
         'line-opacity': 0.5
       }
