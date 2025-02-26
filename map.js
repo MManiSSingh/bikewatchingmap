@@ -47,8 +47,9 @@ map.on('load', async () => {
   let circles;
 
   const stationUrl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
-  d3.json(stationUrl).then(jsonData => {
-    stations = jsonData.data.stations;
+  try {
+    const stationData = await d3.json(stationUrl);
+    stations = stationData.data.stations;
     circles = svg.selectAll('circle')
       .data(stations, d => d.short_name)
       .enter()
@@ -59,25 +60,26 @@ map.on('load', async () => {
       .attr('stroke-width', 1)
       .attr('opacity', 0.8);
     updatePositions();
-  }).catch(error => {
+  } catch (error) {
     console.error('Error loading station JSON:', error);
-  });
+  }
 
-  let trips = await d3.csv(
-    'https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv',
-    trip => {
+  let trips;
+  try {
+    trips = await d3.csv('https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv', trip => {
       trip.started_at = new Date(trip.started_at);
       trip.ended_at = new Date(trip.ended_at);
       return trip;
-    }
-  );
+    });
+  } catch (error) {
+    console.error('Error loading traffic CSV:', error);
+  }
 
   const departures = d3.rollup(
     trips,
     v => v.length,
     d => d.start_station_id
   );
-  
   const arrivals = d3.rollup(
     trips,
     v => v.length,
@@ -85,7 +87,7 @@ map.on('load', async () => {
   );
 
   stations = stations.map(station => {
-    const id = station.short_name;
+    let id = station.short_name;
     station.departures = departures.get(id) ?? 0;
     station.arrivals = arrivals.get(id) ?? 0;
     station.totalTraffic = station.departures + station.arrivals;
@@ -101,7 +103,7 @@ map.on('load', async () => {
       .data(stations, d => d.short_name)
       .transition().duration(500)
       .attr('r', d => radiusScale(d.totalTraffic));
-
+      
     circles.each(function(d) {
       d3.select(this).select('title').remove();
       d3.select(this)
