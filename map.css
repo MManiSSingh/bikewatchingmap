@@ -26,15 +26,14 @@ html, body {
   
   .tooltip {
     position: absolute;
-    text-align: center;
-    width: auto;
-    padding: 5px;
-    font-size: 12px;
-    background: white;
-    border: 1px solid black;
-    border-radius: 4px;
+    z-index: 10000;
     pointer-events: none;
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 5px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #333;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    z-index: 1000;
   }
   
