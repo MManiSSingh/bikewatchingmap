@@ -14,7 +14,6 @@ map.on('load', async () => {
     type: 'geojson',
     data: 'https://bostonopendata-boston.opendata.arcgis.com/datasets/boston::existing-bike-network-2022.geojson'
   });
-
   map.addLayer({
     id: 'bike-lanes',
     type: 'line',
@@ -30,7 +29,6 @@ map.on('load', async () => {
     type: 'geojson',
     data: 'https://raw.githubusercontent.com/cambridgegis/cambridgegis_data/main/Recreation/Bike_Facilities/RECREATION_BikeFacilities.geojson'
   });
-
   map.addLayer({
     id: 'cambridge-bike-lanes',
     type: 'line',
@@ -46,9 +44,8 @@ map.on('load', async () => {
   let stations = [];
   let circles;
 
-  const stationUrl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
   try {
-    const stationData = await d3.json(stationUrl);
+    const stationData = await d3.json('https://dsc106.com/labs/lab07/data/bluebikes-stations.json');
     stations = stationData.data.stations;
     circles = svg.selectAll('circle')
       .data(stations, d => d.short_name)
@@ -103,7 +100,6 @@ map.on('load', async () => {
       .data(stations, d => d.short_name)
       .transition().duration(500)
       .attr('r', d => radiusScale(d.totalTraffic));
-      
     circles.each(function(d) {
       d3.select(this).select('title').remove();
       d3.select(this)
@@ -113,6 +109,29 @@ map.on('load', async () => {
   }
 
   updatePositions();
+
+  const tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("visibility", "hidden")
+    .style("position", "absolute")
+    .style("background", "white")
+    .style("border", "1px solid black")
+    .style("border-radius", "4px")
+    .style("padding", "5px")
+    .style("font-size", "12px");
+
+  circles
+    .on("mouseover", function(event, d) {
+      tooltip.style("visibility", "visible")
+        .html(`${d.totalTraffic} trips <br>(${d.departures} departures, ${d.arrivals} arrivals)`);
+    })
+    .on("mousemove", function(event) {
+      tooltip.style("top", (event.pageY - 10) + "px")
+        .style("left", (event.pageX + 10) + "px");
+    })
+    .on("mouseout", function() {
+      tooltip.style("visibility", "hidden");
+    });
 
   function getCoords(station) {
     const point = new mapboxgl.LngLat(+station.lon, +station.lat);
