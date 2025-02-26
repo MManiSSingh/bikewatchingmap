@@ -43,6 +43,8 @@ map.on('load', async () => {
 
   const jsonurl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
   d3.json(jsonurl).then(jsonData => {
+    const stations = jsonData.data.stations;
+    console.log('Stations Array:', stations);
     console.log('Loaded JSON Data:', jsonData); 
   }).catch(error => {
     console.error('Error loading JSON:', error); 
