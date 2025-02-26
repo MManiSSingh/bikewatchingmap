@@ -68,26 +68,22 @@ map.on('load', async () => {
       .attr('stroke-width', 1)    // border thickness
       .attr('opacity', 0.8);      // circle opacity
 
-    // Position the circles initially
     updatePositions();
   }).catch(error => {
     console.error('Error loading JSON:', error); 
   });
 
-  // Update marker positions on map interactions
   map.on('move', updatePositions);    
   map.on('zoom', updatePositions);   
   map.on('resize', updatePositions);
   map.on('moveend', updatePositions); 
 
-  // Helper function to convert station coordinates to pixel positions
   function getCoords(station) {
     const point = new mapboxgl.LngLat(+station.lon, +station.lat);
     const { x, y } = map.project(point);
     return { cx: x, cy: y };
   }
 
-  // Update positions of all station circles
   function updatePositions() {
     if (circles) {
       circles
