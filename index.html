@@ -10,10 +10,9 @@
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
 </head>
 <body>
-  <header style="display: flex; gap: 1em; align-items: baseline; padding: 1em;">
+  <header style="display: flex; justify-content: space-between; align-items: baseline; padding: 1em;">
     <h1>🚴🏼‍♀️ Bikewatching</h1>
-    <!-- Spacer to push slider to the right -->
-    <label style="margin-left: auto;">
+    <label>
       Filter by time:
       <input type="range" id="time-slider" min="-1" max="1440" value="-1">
       <time id="selected-time" style="display: block;"></time>
