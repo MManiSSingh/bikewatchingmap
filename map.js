@@ -10,6 +10,7 @@ const map = new mapboxgl.Map({
 });
 
 map.on('load', async () => {
+  // Add Boston bike lanes source and layer
   map.addSource('boston_route', {
     type: 'geojson',
     data: 'https://bostonopendata-boston.opendata.arcgis.com/datasets/boston::existing-bike-network-2022.geojson'
@@ -26,6 +27,7 @@ map.on('load', async () => {
     }
   });
   
+  // Add Cambridge bike lanes source and layer
   map.addSource('cambridge_bike_lanes', {
     type: 'geojson',
     data: 'https://raw.githubusercontent.com/cambridgegis/cambridgegis_data/main/Recreation/Bike_Facilities/RECREATION_BikeFacilities.geojson'
@@ -42,10 +44,12 @@ map.on('load', async () => {
     }
   });
 
+  // Select the SVG element appended to the #map container
   const svg = d3.select('#map').select('svg');
   let stations = [];
   let circles;
 
+  // Load station data and create circles with pointer events enabled
   const stationUrl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
   try {
     const stationData = await d3.json(stationUrl);
@@ -58,12 +62,14 @@ map.on('load', async () => {
       .attr('fill', 'steelblue')
       .attr('stroke', 'white')
       .attr('stroke-width', 1)
-      .attr('opacity', 0.8);
+      .attr('opacity', 0.8)
+      .style('pointer-events', 'auto'); // Enable pointer events on circles
     updatePositions();
   } catch (error) {
     console.error('Error loading station JSON:', error);
   }
 
+  // Load trips data from CSV
   let trips;
   try {
     trips = await d3.csv('https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv', trip => {
@@ -75,6 +81,7 @@ map.on('load', async () => {
     console.error('Error loading traffic CSV:', error);
   }
 
+  // Compute departures and arrivals per station using d3.rollup
   const departures = d3.rollup(
     trips,
     v => v.length,
@@ -86,6 +93,7 @@ map.on('load', async () => {
     d => d.end_station_id
   );
 
+  // Update stations data with departures, arrivals, and total traffic
   stations = stations.map(station => {
     let id = station.short_name;
     station.departures = departures.get(id) ?? 0;
@@ -94,10 +102,12 @@ map.on('load', async () => {
     return station;
   });
 
+  // Create a radius scale based on total traffic
   const radiusScale = d3.scaleSqrt()
     .domain([0, d3.max(stations, d => d.totalTraffic)])
     .range([0, 25]);
 
+  // Update circles with new radius and add/update the tooltip (<title> element)
   if (circles) {
     circles
       .data(stations, d => d.short_name)
@@ -105,7 +115,9 @@ map.on('load', async () => {
       .attr('r', d => radiusScale(d.totalTraffic));
       
     circles.each(function(d) {
+      // Remove any existing <title> to avoid duplicates
       d3.select(this).select('title').remove();
+      // Append <title> for browser tooltips displaying trip details
       d3.select(this)
         .append('title')
         .text(`${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
@@ -114,12 +126,14 @@ map.on('load', async () => {
 
   updatePositions();
 
+  // Function to project station coordinates to screen space
   function getCoords(station) {
     const point = new mapboxgl.LngLat(+station.lon, +station.lat);
     const { x, y } = map.project(point);
     return { cx: x, cy: y };
   }
 
+  // Function to update circle positions based on current map state
   function updatePositions() {
     if (circles) {
       circles
@@ -128,9 +142,9 @@ map.on('load', async () => {
     }
   }
 
+  // Update circle positions on various map events
   map.on('move', updatePositions);
   map.on('zoom', updatePositions);
   map.on('resize', updatePositions);
   map.on('moveend', updatePositions);
-  
 });
