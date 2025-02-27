@@ -56,16 +56,20 @@ map.on('load', async () => {
   // Global filter: -1 indicates no filtering
   let timeFilter = -1;
 
-  // Convert minutes (0-1440) into formatted time (HH:MM AM/PM)
+  // Pre-bucket arrays: one for each minute of the day (0-1439)
+  let departuresByMinute = Array.from({ length: 1440 }, () => []);
+  let arrivalsByMinute = Array.from({ length: 1440 }, () => []);
+
+  // Helper: Convert minutes (0-1440) into formatted time (HH:MM AM/PM)
   function formatTime(minutes) {
     const date = new Date(0, 0, 0, 0, minutes);
     return date.toLocaleString('en-US', { timeStyle: 'short' });
   }
-  // Compute minutes since midnight for a given Date object
+  // Helper: Compute minutes since midnight for a Date object
   function minutesSinceMidnight(date) {
     return date.getHours() * 60 + date.getMinutes();
   }
-
+  
   // ----------------------
   // SLIDER ELEMENTS & REACTIVITY
   // ----------------------
@@ -82,12 +86,12 @@ map.on('load', async () => {
       selectedTime.textContent = formatTime(timeFilter);
       anyTimeLabel.style.display = 'none';
     }
-    // When the time changes, re-filter the trips and update the circles
+    // When the slider updates, filter trips and update circles.
     const updatedStations = filterTripsAndComputeAggregates();
     updateCircles(updatedStations);
   }
   timeSlider.addEventListener('input', updateTimeDisplay);
-  updateTimeDisplay(); // initialize display
+  updateTimeDisplay(); // Initialize display
 
   // ----------------------
   // DATA LOADING
@@ -106,7 +110,7 @@ map.on('load', async () => {
       .attr('stroke', 'white')
       .attr('stroke-width', 1)
       .attr('opacity', 0.8)
-      .style('pointer-events', 'auto'); // Allow tooltips
+      .style('pointer-events', 'auto'); // Enable tooltips
     updatePositions();
   } catch (error) {
     console.error('Error loading station JSON:', error);
@@ -119,6 +123,14 @@ map.on('load', async () => {
       trip.ended_at = new Date(trip.ended_at);
       return trip;
     });
+    // Pre-bucket each trip by its start and end minute
+    for (let trip of trips) {
+      let startMin = minutesSinceMidnight(trip.started_at);
+      departuresByMinute[startMin].push(trip);
+      
+      let endMin = minutesSinceMidnight(trip.ended_at);
+      arrivalsByMinute[endMin].push(trip);
+    }
   } catch (error) {
     console.error('Error loading traffic CSV:', error);
   }
@@ -126,7 +138,55 @@ map.on('load', async () => {
   // ----------------------
   // FILTERING & AGGREGATION FUNCTIONS
   // ----------------------
-  // Compute aggregated departures and arrivals counts for a given trips array.
+  // Helper function to filter trips from bucket arrays (handles window spanning midnight)
+  function filterByMinute(tripsByMinute, minute) {
+    // Calculate lower and upper bounds (window of 60 minutes on each side)
+    let minMinute = (minute - 60 + 1440) % 1440;
+    let maxMinute = (minute + 60) % 1440;
+    if (minMinute > maxMinute) {
+      // Window spans midnight: combine two slices
+      let beforeMidnight = tripsByMinute.slice(minMinute);
+      let afterMidnight = tripsByMinute.slice(0, maxMinute);
+      return beforeMidnight.concat(afterMidnight).flat();
+    } else {
+      return tripsByMinute.slice(minMinute, maxMinute).flat();
+    }
+  }
+
+  // Compute aggregates based on filtered trips using buckets;
+  // If no filter is applied, compute over all trips.
+  function filterTripsAndComputeAggregates() {
+    if (timeFilter === -1) {
+      return computeAggregates(trips);
+    } else {
+      const filteredDepartureTrips = filterByMinute(departuresByMinute, timeFilter);
+      const filteredArrivalTrips = filterByMinute(arrivalsByMinute, timeFilter);
+      
+      const filteredDepartures = d3.rollup(
+        filteredDepartureTrips,
+        v => v.length,
+        d => d.start_station_id
+      );
+      const filteredArrivals = d3.rollup(
+        filteredArrivalTrips,
+        v => v.length,
+        d => d.end_station_id
+      );
+      
+      // Clone stations and update with filtered counts
+      const updatedStations = stations.map(station => {
+        const id = station.short_name;
+        let newStation = { ...station };
+        newStation.departures = filteredDepartures.get(id) ?? 0;
+        newStation.arrivals = filteredArrivals.get(id) ?? 0;
+        newStation.totalTraffic = newStation.departures + newStation.arrivals;
+        return newStation;
+      });
+      return updatedStations;
+    }
+  }
+
+  // Compute aggregates over a given array of trips (used when no filter is active)
   function computeAggregates(tripData) {
     const departures = d3.rollup(
       tripData,
@@ -138,10 +198,9 @@ map.on('load', async () => {
       v => v.length,
       d => d.end_station_id
     );
-    // Create new station objects with updated counts (avoid mutating original stations)
     const updatedStations = stations.map(station => {
       const id = station.short_name;
-      const newStation = { ...station };
+      let newStation = { ...station };
       newStation.departures = departures.get(id) ?? 0;
       newStation.arrivals = arrivals.get(id) ?? 0;
       newStation.totalTraffic = newStation.departures + newStation.arrivals;
@@ -150,28 +209,11 @@ map.on('load', async () => {
     return updatedStations;
   }
 
-  // Filter trips based on timeFilter.
-  // If timeFilter is -1, return all trips.
-  // Otherwise, only include trips that start or end within 60 minutes of the selected time.
-  function filterTripsAndComputeAggregates() {
-    if (timeFilter === -1) {
-      return computeAggregates(trips);
-    } else {
-      const filteredTrips = trips.filter(trip => {
-        const startMin = minutesSinceMidnight(trip.started_at);
-        const endMin = minutesSinceMidnight(trip.ended_at);
-        return (Math.abs(startMin - timeFilter) <= 60 ||
-                Math.abs(endMin - timeFilter) <= 60);
-      });
-      return computeAggregates(filteredTrips);
-    }
-  }
-
   // ----------------------
   // VISUALIZATION UPDATES
   // ----------------------
   function updateCircles(stationData) {
-    // Adjust radius scale: use a different range when filtered
+    // Adjust radius scale: larger circles when filtering (fewer trips)
     const radiusScale = d3.scaleSqrt()
       .domain([0, d3.max(stationData, d => d.totalTraffic)])
       .range(timeFilter === -1 ? [0, 25] : [3, 50]);
@@ -186,7 +228,7 @@ map.on('load', async () => {
       .attr('r', d => radiusScale(d.totalTraffic))
       .style('pointer-events', 'auto');
 
-    // Update tooltips
+    // Update tooltips to show current trip counts
     circles.selectAll('title').remove();
     circles.append('title')
       .text(d => `${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
