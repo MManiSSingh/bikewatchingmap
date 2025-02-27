@@ -56,11 +56,11 @@ map.on('load', async () => {
   // Global filter: -1 indicates no filtering
   let timeFilter = -1;
 
-  // Pre-bucket arrays: one for each minute of the day (0-1439)
+  // Pre-bucket arrays: one for each minute of the day (0–1439)
   let departuresByMinute = Array.from({ length: 1440 }, () => []);
   let arrivalsByMinute = Array.from({ length: 1440 }, () => []);
 
-  // Helper: Convert minutes (0-1440) into formatted time (HH:MM AM/PM)
+  // Helper: Convert minutes (0–1439) into formatted time (HH:MM AM/PM)
   function formatTime(minutes) {
     const date = new Date(0, 0, 0, 0, minutes);
     return date.toLocaleString('en-US', { timeStyle: 'short' });
@@ -73,6 +73,7 @@ map.on('load', async () => {
   // ----------------------
   // SLIDER ELEMENTS & REACTIVITY
   // ----------------------
+  // (Ensure in your HTML the slider's max is set to 1439.)
   const timeSlider = document.getElementById('time-slider');
   const selectedTime = document.getElementById('selected-time');
   const anyTimeLabel = document.getElementById('any-time');
@@ -140,11 +141,10 @@ map.on('load', async () => {
   // ----------------------
   // Helper function to filter trips from bucket arrays (handles window spanning midnight)
   function filterByMinute(tripsByMinute, minute) {
-    // Calculate lower and upper bounds (window of 60 minutes on each side)
     let minMinute = (minute - 60 + 1440) % 1440;
     let maxMinute = (minute + 60) % 1440;
     if (minMinute > maxMinute) {
-      // Window spans midnight: combine two slices
+      // Window spans midnight: combine slices before and after midnight
       let beforeMidnight = tripsByMinute.slice(minMinute);
       let afterMidnight = tripsByMinute.slice(0, maxMinute);
       return beforeMidnight.concat(afterMidnight).flat();
@@ -153,8 +153,8 @@ map.on('load', async () => {
     }
   }
 
-  // Compute aggregates based on filtered trips using buckets;
-  // If no filter is applied, compute over all trips.
+  // Compute aggregates based on filtered trips using buckets.
+  // If no filter is applied, compute aggregates over all trips.
   function filterTripsAndComputeAggregates() {
     if (timeFilter === -1) {
       return computeAggregates(trips);
@@ -173,7 +173,7 @@ map.on('load', async () => {
         d => d.end_station_id
       );
       
-      // Clone stations and update with filtered counts
+      // Clone stations and update with filtered counts.
       const updatedStations = stations.map(station => {
         const id = station.short_name;
         let newStation = { ...station };
@@ -213,10 +213,12 @@ map.on('load', async () => {
   // VISUALIZATION UPDATES
   // ----------------------
   function updateCircles(stationData) {
-    // Adjust radius scale: larger circles when filtering (fewer trips)
+    // Adjust circle radius scale:
+    // When no filter is applied, use a range of [0, 15];
+    // When filtering, use a slightly larger range [2, 20] to enhance visibility.
     const radiusScale = d3.scaleSqrt()
       .domain([0, d3.max(stationData, d => d.totalTraffic)])
-      .range(timeFilter === -1 ? [0, 25] : [3, 50]);
+      .range(timeFilter === -1 ? [0, 15] : [2, 20]);
     
     circles = svg.selectAll('circle')
       .data(stationData, d => d.short_name)
@@ -228,7 +230,7 @@ map.on('load', async () => {
       .attr('r', d => radiusScale(d.totalTraffic))
       .style('pointer-events', 'auto');
 
-    // Update tooltips to show current trip counts
+    // Update tooltips with the current trip counts
     circles.selectAll('title').remove();
     circles.append('title')
       .text(d => `${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
@@ -243,7 +245,7 @@ map.on('load', async () => {
     return { cx: x, cy: y };
   }
 
-  // Update circle positions based on current map view
+  // Update circle positions based on the current map view
   function updatePositions() {
     if (circles) {
       circles.attr('cx', d => getCoords(d).cx)
