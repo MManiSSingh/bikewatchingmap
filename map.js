@@ -14,6 +14,7 @@ map.on('load', async () => {
     type: 'geojson',
     data: 'https://bostonopendata-boston.opendata.arcgis.com/datasets/boston::existing-bike-network-2022.geojson'
   });
+
   map.addLayer({
     id: 'bike-lanes',
     type: 'line',
@@ -29,6 +30,7 @@ map.on('load', async () => {
     type: 'geojson',
     data: 'https://raw.githubusercontent.com/cambridgegis/cambridgegis_data/main/Recreation/Bike_Facilities/RECREATION_BikeFacilities.geojson'
   });
+
   map.addLayer({
     id: 'cambridge-bike-lanes',
     type: 'line',
@@ -44,8 +46,9 @@ map.on('load', async () => {
   let stations = [];
   let circles;
 
+  const stationUrl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
   try {
-    const stationData = await d3.json('https://dsc106.com/labs/lab07/data/bluebikes-stations.json');
+    const stationData = await d3.json(stationUrl);
     stations = stationData.data.stations;
     circles = svg.selectAll('circle')
       .data(stations, d => d.short_name)
