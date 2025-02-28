@@ -1,76 +1,27 @@
-/* Overall page layout: center content vertically and horizontally */
 html, body {
     margin: 0;
     padding: 5px;
     height: 100%;
     width: 100%;
     display: flex;
-    flex-direction: column;  /* Stack header and main content vertically */
-    align-items: center;     /* Center the container on the page */
-    box-sizing: border-box;
-    font: 100%/1.5 system-ui, sans-serif;
+    justify-content: center; 
   }
   
-  /* Header: full width container for title and slider */
-  header {
-    width: 100%;
-    max-width: 80em;         /* Optional: limit the max width for better readability */
-    display: flex;
-    justify-content: space-between; /* Title left, slider right */
-    align-items: baseline;
-    padding: 1em;
-    gap: 1em;
-    border-bottom: 1px solid #ccc; /* Optional: add a subtle divider */
-  }
-  
-  /* Title styling: left aligned */
-  header h1 {
-    margin: 0;
-    text-align: left;
-  }
-  
-  /* Slider container styling */
-  header label {
-    display: flex;
-    flex-direction: column; /* Stack slider, time, and em vertically */
-    align-items: flex-end;  /* Right align all items within the label */
-    margin-left: auto;
-  }
-  
-  /* Force <time> and <em> to be on their own line */
-  header label time,
-  header label em {
-    display: block;
-    margin-top: 0.5em;
-  }
-  
-  /* Style the <em> element for a lighter, italicized appearance */
-  header label em {
-    color: #888;
-    font-style: italic;
-  }
-  
-  /* Map container: centered and fills the remaining space */
   #map {
-    width: 100%;
-    max-width: 80em;         /* Same as header for consistency */
-    flex-grow: 1;            /* Grow to fill vertical space */
-    position: relative;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+    width: 100%;   
+    height: 100%;  
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+    border-radius: 8px; 
   }
   
-  /* SVG overlay for station markers */
   #map svg {
     position: absolute;
-    top: 0;
-    left: 0;
+    z-index: 1;
     width: 100%;
     height: 100%;
-    pointer-events: none;    /* Disable pointer events on the SVG itself */
+    pointer-events: none;
   }
   
-  /* Enable pointer events on circles for interactivity/tooltips */
   #map svg circle {
     pointer-events: auto;
   }
