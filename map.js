@@ -223,7 +223,7 @@ map.on('load', async () => {
     circles = svg.selectAll('circle')
       .data(stationData, d => d.short_name)
       .join('circle')
-      .attr('fill', 'orangered')
+      .attr('fill', 'steelblue')
       .attr('stroke', 'white')
       .attr('stroke-width', 1)
       .attr('opacity', 0.8)
